@@ -1,0 +1,4 @@
+.build/
+.swiftpm/
+RuEnHelper.app/
+.DS_Store
