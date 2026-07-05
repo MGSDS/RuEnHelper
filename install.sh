@@ -8,10 +8,10 @@
 #   ./install.sh --uninstall  remove the app and the LaunchAgent
 #
 # Standalone install (no repo checkout needed):
-#   curl -fsSL https://raw.githubusercontent.com/MGSDS/ruen-helper/main/install.sh | zsh
+#   curl -fsSL https://raw.githubusercontent.com/MGSDS/RuEnHelper/master/install.sh | zsh
 set -e
 
-REPO=MGSDS/ruen-helper
+REPO=MGSDS/RuEnHelper
 APP_NAME=RuEnHelper
 BUNDLE_ID=com.mgsds.ruen-helper
 INSTALL_DIR="$HOME/Applications"
