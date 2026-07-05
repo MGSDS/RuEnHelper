@@ -1,16 +1,24 @@
 #!/bin/zsh
-# Installs RuEnHelper: builds the app, copies it to ~/Applications,
-# and registers a LaunchAgent so it starts at login.
-# Usage: ./install.sh | ./install.sh --uninstall
+# Installs RuEnHelper to ~/Applications and registers a LaunchAgent
+# so it starts at login.
+#
+# Usage:
+#   ./install.sh              download the latest release from GitHub and install
+#   ./install.sh --local      build from source and install
+#   ./install.sh --uninstall  remove the app and the LaunchAgent
+#
+# Standalone install (no repo checkout needed):
+#   curl -fsSL https://raw.githubusercontent.com/MGSDS/ruen-helper/main/install.sh | zsh
 set -e
-cd "$(dirname "$0")"
 
+REPO=MGSDS/ruen-helper
 APP_NAME=RuEnHelper
 BUNDLE_ID=com.mgsds.ruen-helper
 INSTALL_DIR="$HOME/Applications"
 APP_PATH="$INSTALL_DIR/$APP_NAME.app"
 AGENT_PLIST="$HOME/Library/LaunchAgents/$BUNDLE_ID.plist"
 AGENT_LABEL="$BUNDLE_ID"
+DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/$APP_NAME.app.zip"
 
 uninstall() {
     launchctl bootout "gui/$UID/$AGENT_LABEL" 2>/dev/null || true
@@ -25,7 +33,20 @@ if [[ "$1" == "--uninstall" ]]; then
     exit 0
 fi
 
-./make-app.sh
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+if [[ "$1" == "--local" ]]; then
+    cd "$(dirname "$0")"
+    ./make-app.sh
+    cp -R "$APP_NAME.app" "$TMP_DIR/$APP_NAME.app"
+else
+    echo "Downloading $DOWNLOAD_URL"
+    curl -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/app.zip"
+    ditto -x -k "$TMP_DIR/app.zip" "$TMP_DIR"
+    [[ -d "$TMP_DIR/$APP_NAME.app" ]] || { echo "Unexpected archive layout" >&2; exit 1; }
+    xattr -dr com.apple.quarantine "$TMP_DIR/$APP_NAME.app" 2>/dev/null || true
+fi
 
 # Stop a running instance before replacing the bundle
 launchctl bootout "gui/$UID/$AGENT_LABEL" 2>/dev/null || true
@@ -33,7 +54,7 @@ pkill -x "$APP_NAME" 2>/dev/null || true
 
 mkdir -p "$INSTALL_DIR"
 rm -rf "$APP_PATH"
-cp -R "$APP_NAME.app" "$APP_PATH"
+cp -R "$TMP_DIR/$APP_NAME.app" "$APP_PATH"
 
 mkdir -p "$HOME/Library/LaunchAgents"
 cat > "$AGENT_PLIST" <<EOF
